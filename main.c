@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include "command.h"
+#include "shell.h"
 
 int main(int argc, const char* argv[]) {
     init_cmd_structs();
-
-    int i = (exit_cmd->function)();
+    enter_shell();
     return 0;
 }
