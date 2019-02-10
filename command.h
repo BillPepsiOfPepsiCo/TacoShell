@@ -6,21 +6,30 @@
 #define TECHSHELL_COMMAND_H
 
 #define NUM_COMMANDS 3
+#define MAX_COMMAND_ARGS 10
 
 /**
  * The structure that stores the name of a command
  * and its associated function.
  */
 
-typedef int (*associated_function)();
+typedef int (*associated_function)(char*[]);
 typedef char* command_string;
 
 typedef struct Command {
     command_string cmd_str;
     associated_function function;
+    char* usage_message;
 } cmd_t;
 
 static cmd_t* ALL_COMMANDS[NUM_COMMANDS];
+
+/**
+ * This is gonna be like argv[], where argv[0] is
+ * the command and the following indices are the
+ * arguments.
+ */
+static char* COMMAND_ARGS[MAX_COMMAND_ARGS];
 
 cmd_t* cd;
 cmd_t* p_wd;
@@ -29,8 +38,8 @@ cmd_t* exit_cmd;
 void init_cmd_structs(void);
 
 //Built-in commands
-int _builtin_cd(char* dir);
-int _builtin_pwd();
-int _builtin_exit();
+int _builtin_cd(char*[]);
+int _builtin_pwd(char*[]);
+int _builtin_exit(char*[]);
 
 #endif //TECHSHELL_COMMAND_H
