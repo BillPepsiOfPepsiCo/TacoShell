@@ -24,18 +24,12 @@ typedef struct Command {
 
 static cmd_t* ALL_COMMANDS[NUM_COMMANDS];
 
-/**
- * This is gonna be like argv[], where argv[0] is
- * the command and the following indices are the
- * arguments.
- */
-static char* COMMAND_ARGS[MAX_COMMAND_ARGS];
-
 cmd_t* cd;
 cmd_t* p_wd;
 cmd_t* exit_cmd;
 
 void init_cmd_structs(void);
+int parse(char*[]);
 
 //Built-in commands
 int _builtin_cd(char*[]);

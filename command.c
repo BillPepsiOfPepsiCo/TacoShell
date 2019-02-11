@@ -11,23 +11,18 @@
 
 /**
  * The Mac Daddy function that parses input from the user.
- * Returns:
- * -3 if the command was found but an incorrect number of arguments were passed.
- * -2 if the command was found and executed but an error occurred.
- * -1 if the command wasn't found.
- * 0 if nothing went wrong.
  */
 int parse(char* args[]) {
     for (int i = 0; i < NUM_COMMANDS; i++) {
         cmd_t* command = ALL_COMMANDS[i];
 
         if (strcmp(command->cmd_str, args[0]) == 0) {
-            (command->function)(args); //TODO don't disregard the return status
-            return 0;
+            return (command->function)(args);
         }
     }
 
-    return -1;
+
+    return process_external_command(args);
 }
 
 /**
@@ -64,7 +59,7 @@ void init_cmd_structs() {
  * @return
  */
 int _builtin_cd(char* args[]) {
-    char* dir = args[0]; //TODO I dont think this is the correct index
+    char* dir = args[1];
     WORKING_DIR = dir;
     return chdir(dir);
 }
