@@ -7,6 +7,8 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <wait.h>
+#include <stdbool.h>
+#include <sys/fcntl.h>
 #include "shell.h"
 #include "command.h"
 
@@ -26,43 +28,50 @@ void enter_shell() {
 
     char buf[1024];
     char pathbuf[256];
-
     char **tokenized_input = (char **) malloc(sizeof(char *) * 16);
     for (int i = 0; i < 16; i++) {
         tokenized_input[0] = (char *) malloc(sizeof(char) * 64);
     }
 
     while (1) {
+        bool HAS_REDIRECT = false;
+        char* redirect;
+
         db_printf("enter_shell 1");
         getcwd(pathbuf, sizeof(pathbuf));
         printf("%s@%s> ", pathbuf, getlogin());
         db_printf("enter_shell 2");
         gets(buf);
         db_printf("enter_shell 3");
-        parse_cl(buf, tokenized_input);
+        parse_cl(buf, tokenized_input, &HAS_REDIRECT, &redirect);
+
+
         db_printf("enter_shell 4");
-        execcmd(tokenized_input);
+        execcmd(tokenized_input, HAS_REDIRECT, redirect);
     }
 }
-
 
 #pragma clang diagnostic pop
 
 //BEGIN DEVIN KNUD-SECTION
-void parse_cl(char input[], char **ret) {
+void parse_cl(char input[], char** ret, bool* has_redirect, char** redir_ret) {
     unsigned int tok_index = 0;
     char *token;
     char *remainder = input;
 
     while ((token = strtok_r(remainder, " ", &remainder))) {
         ret[tok_index] = token;
+        if (is_redirect(token)) {
+            (*has_redirect) = true;
+            (*redir_ret) = token;
+        }
         tok_index++;
     }
 
     NUM_TOKENS = tok_index;
 }
 
-void execcmd(char **command) {
+void execcmd(char **command, const bool has_redirect, const char* redirector) {
     //Relatively complex macro.
     //Very legal and very cool.
     //All you need to know is that this expands to a macro
@@ -74,6 +83,25 @@ void execcmd(char **command) {
     db_printf("Execcmd 2");
 
     if (fork() == 0) {
+        if (has_redirect) {
+            //TODO the redirect operator and the filename make it to the execv call
+            //TODO implement 2> support which is literally like 1 change dingus just do it before you commit
+            db_printf("Has redirect")
+            unsigned int ordinal = 0;
+            while (strcmp(">>", command[ordinal++]) != 0);
+
+
+            char* filename;
+            if (command[ordinal]) {
+                size_t filename_len = strlen(command[ordinal]);
+                filename = (char*) malloc(sizeof(char) * filename_len);
+                strcpy(filename, command[ordinal]);
+
+                int file_desc = open(filename, O_CREAT | O_WRONLY, 0666);
+                dup2(file_desc, STDOUT_FILENO);
+            }
+        }
+
         db_printf("Execcmd 2a");
         char *cmd[NUM_TOKENS];
         cmd[NUM_TOKENS] = NULL;
