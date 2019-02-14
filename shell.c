@@ -29,18 +29,23 @@ void enter_shell() {
 
     char buf[1024];
     char pathbuf[256];
-    char **tokenized_input = (char **) malloc(sizeof(char *) * 16);
-    for (int i = 0; i < 16; i++) {
-        tokenized_input[0] = (char *) malloc(sizeof(char) * 64);
-    }
 
     while (1) {
         bool HAS_REDIRECT = false;
-        redirec_t redirects[E_REDIRECT_N];
+        redirec_t redirects[] = {NONE, NONE, NONE};
+        char** tokenized_input = (char **) malloc(sizeof(char *) * 16);
         char** filenames = (char**) malloc(sizeof(char*) * E_REDIRECT_N);
+
+        for (int i = 0; i < 16; i++) {
+            tokenized_input[i] = (char *) malloc(sizeof(char) * 64);
+        }
+
         for (int i = 0; i < E_REDIRECT_N; i++) {
             filenames[i] = (char*) malloc(sizeof(char) * 64);
         }
+
+        int num_redirects;
+
 
         db_printf("enter_shell 1");
         getcwd(pathbuf, sizeof(pathbuf));
@@ -48,28 +53,28 @@ void enter_shell() {
         db_printf("enter_shell 2");
         gets(buf);
         db_printf("enter_shell 3");
-        if (parse_cl(buf, tokenized_input, &HAS_REDIRECT, redirects, filenames) == 0) {
+        if (parse_cl(buf, tokenized_input, &HAS_REDIRECT, redirects, &num_redirects, filenames) == 0) {
             db_printf("enter_shell 4");
             if (DEBUG) {
                 for (int i = 0; i < E_REDIRECT_N; i++) {
                     printf("redirects[%d]=%s, filename=%s\n", i, redirect_to_str(redirects[i]), filenames[i]);
                 }
-                continue;
             }
-
-            execcmd(tokenized_input, HAS_REDIRECT, redirects);
+            execcmd(tokenized_input, HAS_REDIRECT, redirects, num_redirects, filenames);
         } else {
-            perror("Parse error\n");
+            printf("Parse error\n");
         }
 
         free(filenames);
+        free(tokenized_input);
+        memset(buf, 0, sizeof buf);
     }
 }
 
 #pragma clang diagnostic pop
 
 //BEGIN DEVIN KNUD-SECTION
-int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E_REDIRECT_N], char** filenames) {
+int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E_REDIRECT_N], int* ret_n_redirects, char** filenames) {
     unsigned int tok_index = 0;
     char *token;
     char *remainder = input;
@@ -77,7 +82,6 @@ int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E
     bool processing_redirects = false;
 
     while ((token = strtok_r(remainder, " ", &remainder))) {
-
         if (is_redirect(token)) {
             (*has_redirect) = true;
             processing_redirects = true;
@@ -85,7 +89,7 @@ int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E
 
             for (int i = 0; i < E_REDIRECT_N; i++) {
                 if (redirects[i] == redirect) {
-                    perror("Redundant redirects");
+                    printf("Redundant redirects detected.\n");
                     return -1;
                 }
             }
@@ -104,15 +108,16 @@ int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E
         if (DEBUG) {
             printf("num_redirects=%d, num_filenames=%d\n", num_redirects, num_filenames);
         }
-        perror("Redirect syntax error");
+        printf("Redirect syntax error (missing filename?)\n");
         return -1;
     }
 
     NUM_TOKENS = tok_index;
+    (*ret_n_redirects) = num_redirects;
     return 0;
 }
 
-void execcmd(char **command, const bool has_redirect, const redirec_t redirector[]) {
+void execcmd(char **command, const bool has_redirect, const redirec_t redirects[], int n_redirects, char* filenames[]) {
     //Relatively complex macro.
     //Very legal and very cool.
     //All you need to know is that this expands to a macro
@@ -125,7 +130,23 @@ void execcmd(char **command, const bool has_redirect, const redirec_t redirector
 
     if (fork() == 0) {
         if (has_redirect) {
+            //TODO figure out STDIN redirect, when will it be used
+            for (int i = 0; i < n_redirects; i++) {
+                db_printf("Setting up redirect file")
+                int file_desc = open(filenames[i], O_CREAT | O_WRONLY, 0666);
 
+                switch (redirects[i]) {
+                    case STDOUT:
+                        dup2(file_desc, STDOUT_FILENO);
+                        break;
+                    case STDERR:
+                        dup2(file_desc, STDERR_FILENO);
+                        break;
+                    case STDIN:
+                        printf("Note: STDIN redirects are unsupported.");
+                        break;
+                }
+            }
         }
 
         db_printf("Execcmd 2a");
@@ -180,6 +201,8 @@ char* redirect_to_str(redirec_t redirect) {
             return ">>";
         case STDERR:
             return "2>";
+        case NONE:
+            return "(NONE)";
         default:
             return NULL;
     }
