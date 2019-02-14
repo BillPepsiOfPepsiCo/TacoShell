@@ -14,6 +14,9 @@ typedef int (* associated_function)(const char* []);
 
 typedef char* command_string;
 
+/**
+ * The struct type for builtin commands.
+ */
 typedef struct Command {
 	command_string cmd_str;
 	associated_function function;

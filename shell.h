@@ -34,7 +34,7 @@ void enter_shell(void);
 
 int parse_cl(char[], char* [], bool*, redirec_t[], int*, char* []);
 
-void execcmd(char**, bool, const redirec_t[], int n_redirects, char* []);
+void execcmd(char**, bool, const redirec_t[], int, char* []);
 
 redirec_t str_to_redirect(char*);
 
