@@ -24,16 +24,20 @@
 
 #define E_REDIRECT_N 3
 typedef enum REDIRECT {
-    NONE,
-    STDIN,
-    STDOUT,
-    STDERR
+	NONE,
+	STDIN,
+	STDOUT,
+	STDERR
 } redirec_t;
 
 void enter_shell(void);
-int parse_cl(char[], char*[], bool*, redirec_t[], int*, char*[]);
-void execcmd(char**, bool, const redirec_t[], int n_redirects, char*[]);
+
+int parse_cl(char[], char* [], bool*, redirec_t[], int*, char* []);
+
+void execcmd(char**, bool, const redirec_t[], int n_redirects, char* []);
+
 redirec_t str_to_redirect(char*);
+
 char* redirect_to_str(redirec_t);
 
 
