@@ -22,9 +22,19 @@
 #define GET_UNIX_HOMEPATH 1
 #endif //unix/__unix__/__unix
 
+#define E_REDIRECT_N 3
+typedef enum REDIRECT {
+    STDIN,
+    STDOUT,
+    STDERR
+} redirec_t;
+
 void enter_shell(void);
-void parse_cl(char[], char*[], bool*, char**);
-void execcmd(char**, const bool, const char*);
+int parse_cl(char[], char*[], bool*, redirec_t[], char* filenames[]);
+void execcmd(char**, bool, const redirec_t[]);
+redirec_t str_to_redirect(char*);
+char* redirect_to_str(redirec_t);
+
 
 //Useful macros
 #define command_compare(s) strcmp(command[0], s->cmd_str) == 0
@@ -35,6 +45,8 @@ void execcmd(char**, const bool, const char*);
 #define is_redirect(s) cmp_redir(">>", s) || cmp_redir("<<", s) || cmp_redir("2>", s)
 
 #define db_printf(s) if (DEBUG) { printf("%s\n", s); }
+
+
 
 //DEBUG macro for this file
 #define DEBUG 1
