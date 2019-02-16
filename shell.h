@@ -58,9 +58,12 @@ char* redirect_to_str(redirec_t);
 #define APPEND O_CREAT | O_APPEND
 #define PERMS 0666
 
-#define PIPE_F(name, mode, fileno) dup2(open(name, mode, PERMS), fileno)
-
-
+//This macro is for use only in shell.c/execcmd function.
+//It updates the file_desc variable for use in dup2 and also puts it in the file_descs array so they can be closed cleanly.
+#define getfdesc(mode) file_desc = open(filenames[i], mode, PERMS); file_descs[desc_num++] = file_desc
+//This is also only for use in shell.c/execcmd.
+//this just calls dup2 on the file_desc variable and whatever IO pipe is specified.
+#define PIPEF_TO(fileno) dup2(file_desc, fileno)
 //DEBUG macro for this file
 #define DEBUG 0
 

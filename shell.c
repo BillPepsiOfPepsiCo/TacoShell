@@ -114,12 +114,9 @@ int parse_cl(char input[], char** ret, bool* has_redirect, redirec_t redirects[E
 			//Get the redirec_t value of the token.
 			redirec_t redirect = str_to_redirect(token);
 
-			for (int i = 0; i < E_REDIRECT_N; i++) {
-				//If a redirect is encountered that is already in the array, error out.
-				if (redirects[i] == redirect) {
-					printf("Redundant redirects detected.\n");
-					return -1;
-				}
+			if (num_redirects == 3) {
+				printf("Too many redirects. (Up to 3 are supported)\n");
+				return -1;
 			}
 
 			redirects[num_redirects++] = redirect;
@@ -157,31 +154,48 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
 
 	db_printf("Execcmd 2");
 
+	//The variables that keep track of the opened file descriptors to close them later.
+	//This is updated by the getfdesc macro (most of the time).
+	int file_descs[3] = {0}; //Init each element to 0
+	int desc_num = 0;
+	int file_desc;
+
 	if (fork() == 0) {
 		if (has_redirect) {
 			for (int i = 0; i < n_redirects; i++) {
 				db_printf("Setting up redirect file")
 
 				switch (redirects[i]) {
-					case STDOUT:
-						PIPE_F(filenames[i], OVERWRITE, STDOUT_FILENO);
+					case STDOUT: {
+						getfdesc(OVERWRITE);
+						PIPEF_TO(STDOUT_FILENO);
 						break;
-					case STDERR:
-						PIPE_F(filenames[i], OVERWRITE, STDERR_FILENO);
+					}
+					case STDERR: {
+						getfdesc(OVERWRITE);
+						PIPEF_TO(STDERR_FILENO);
+					}
+					case STDIN: {
+						//I don't use the getfdesc macro here because I don't need to specify any permissions.
+						file_desc = open(filenames[i], O_RDONLY);
+						file_descs[desc_num++] = file_desc;
+						PIPEF_TO(STDIN_FILENO);
 						break;
-					case STDIN:
-						dup2(open(filenames[i], O_RDONLY), STDIN_FILENO);
+					}
+					case STDOUT_APPEND: {
+						getfdesc(APPEND);
+						PIPEF_TO(STDOUT_FILENO);
 						break;
-					case STDOUT_APPEND:
-						PIPE_F(filenames[i], APPEND, STDOUT_FILENO);
+					}
+					case STDERR_APPEND: {
+						getfdesc(APPEND);
+						PIPEF_TO(STDERR_FILENO);
 						break;
-					case STDERR_APPEND:
-						PIPE_F(filenames[i], APPEND, STDERR_FILENO);
-						break;
+					}
 					case STDOUT_STDERR: {
-						int file_desc = open(filenames[i], OVERWRITE, PERMS);
-						dup2(file_desc, STDOUT_FILENO);
-						dup2(file_desc, STDERR_FILENO);
+						getfdesc(OVERWRITE);
+						PIPEF_TO(STDOUT_FILENO);
+						PIPEF_TO(STDERR_FILENO);
 						break;
 					}
 					case NONE:
@@ -202,6 +216,13 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
 		if (execvp(command[0], cmd) == -1) {
 			perror("Execution Error");
 			exit(EXIT_FAILURE);
+		}
+
+		//Close the open file descriptors
+		for (int i = 0; i < n_redirects; i++) {
+			if (file_descs[i] != 0) {
+				close(file_descs[i]);
+			}
 		}
 
 		db_printf("Execcmd 2c");
