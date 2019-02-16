@@ -159,20 +159,32 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
 
 	if (fork() == 0) {
 		if (has_redirect) {
-			//TODO figure out STDIN redirect, when will it be used
 			for (int i = 0; i < n_redirects; i++) {
 				db_printf("Setting up redirect file")
-				int file_desc = open(filenames[i], O_CREAT | O_WRONLY, 0666);
 
 				switch (redirects[i]) {
 					case STDOUT:
-						dup2(file_desc, STDOUT_FILENO);
+						PIPE_F(filenames[i], OVERWRITE, STDOUT_FILENO);
 						break;
 					case STDERR:
-						dup2(file_desc, STDERR_FILENO);
+						PIPE_F(filenames[i], OVERWRITE, STDERR_FILENO);
 						break;
 					case STDIN:
-						printf("Note: STDIN redirects are unsupported.\n");
+						dup2(open(filenames[i], O_RDONLY), STDIN_FILENO);
+						break;
+					case STDOUT_APPEND:
+						PIPE_F(filenames[i], APPEND, STDOUT_FILENO);
+						break;
+					case STDERR_APPEND:
+						PIPE_F(filenames[i], APPEND, STDERR_FILENO);
+						break;
+					case STDOUT_STDERR: {
+						int file_desc = open(filenames[i], OVERWRITE, PERMS);
+						dup2(file_desc, STDOUT_FILENO);
+						dup2(file_desc, STDERR_FILENO);
+						break;
+					}
+					case NONE:
 						break;
 				}
 			}
@@ -218,13 +230,22 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
  * @return the REDIRECT enum type the string represents
  */
 redirec_t str_to_redirect(char* redirect) {
-	if (cmp_redir(redirect, ">>")) {
-		return STDOUT;
-	} else if (cmp_redir(redirect, "<<")) {
+	if (cmp_redir_2(">>")) {
+		return STDOUT_APPEND;
+	} else if (cmp_redir_2("2>>")) {
+		return STDERR_APPEND;
+	} else if (cmp_redir_2("<")) {
 		return STDIN;
-	} else if (cmp_redir(redirect, "2>")) {
+	} else if (cmp_redir_2("2>")) {
 		return STDERR;
+	} else if (cmp_redir_2("&>")) {
+		return STDOUT_STDERR;
+	} else if (cmp_redir_2(">")) {
+		return STDOUT;
 	}
+
+	printf("Error: %s is not a redirect", redirect);
+	exit(0);
 }
 
 /**
@@ -234,12 +255,18 @@ redirec_t str_to_redirect(char* redirect) {
  */
 char* redirect_to_str(redirec_t redirect) {
 	switch (redirect) {
-		case STDIN:
-			return "<<";
-		case STDOUT:
+		case STDOUT_APPEND:
 			return ">>";
+		case STDOUT:
+			return ">";
+		case STDERR_APPEND:
+			return "2>>";
+		case STDIN:
+			return "<";
 		case STDERR:
 			return "2>";
+		case STDOUT_STDERR:
+			return "&>";
 		case NONE:
 			return "(NONE)";
 		default:

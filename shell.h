@@ -27,7 +27,10 @@ typedef enum REDIRECT {
 	NONE,
 	STDIN,
 	STDOUT,
-	STDERR
+	STDERR,
+	STDOUT_APPEND,
+	STDERR_APPEND,
+	STDOUT_STDERR
 } redirec_t;
 
 void enter_shell(void);
@@ -40,17 +43,22 @@ redirec_t str_to_redirect(char*);
 
 char* redirect_to_str(redirec_t);
 
-
 //Useful macros
 #define command_compare(s) strcmp(command[0], s->cmd_str) == 0
 #define call(cmd) (cmd->function)((const char**) command);
 #define chk_builtin(command) if (command_compare(command)) { call(command); return; }
 #define chk_builtins() chk_builtin(p_wd); chk_builtin(cd); chk_builtin(exit_cmd);
 #define cmp_redir(redirect, s) strcmp(redirect, s) == 0
-#define is_redirect(s) cmp_redir(">>", s) || cmp_redir("<<", s) || cmp_redir("2>", s)
+#define cmp_redir_2(s) cmp_redir(redirect, s)
+#define is_redirect(s) cmp_redir(">>", s) || cmp_redir("2>>", s) || cmp_redir("2>", s) || cmp_redir("<", s) || cmp_redir("&>", s) || cmp_redir(">", s)
 
 #define db_printf(s) if (DEBUG) { printf("%s\n", s); }
 
+#define OVERWRITE O_CREAT | O_WRONLY
+#define APPEND O_CREAT | O_APPEND
+#define PERMS 0666
+
+#define PIPE_F(name, mode, fileno) dup2(open(name, mode, PERMS), fileno)
 
 
 //DEBUG macro for this file
