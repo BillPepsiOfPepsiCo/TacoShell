@@ -174,6 +174,7 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
 					case STDERR: {
 						getfdesc(OVERWRITE);
 						PIPEF_TO(STDERR_FILENO);
+						break;
 					}
 					case STDIN: {
 						//I don't use the getfdesc macro here because I don't need to specify any permissions.
