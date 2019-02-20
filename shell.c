@@ -193,8 +193,7 @@ void execcmd(char** command, const bool has_redirect, const redirec_t redirects[
 						PIPEF_TO(STDERR_FILENO);
 						break;
 					}
-					case STDOUT_STDERR: {
-						getfdesc(OVERWRITE);
+					case STDOUT_STDERR: { getfdesc(OVERWRITE);
 						PIPEF_TO(STDOUT_FILENO);
 						PIPEF_TO(STDERR_FILENO);
 						break;
